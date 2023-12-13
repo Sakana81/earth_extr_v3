@@ -37,14 +37,13 @@ def cmdParser():
 
 def read_las(path):
     las = laspy.read(path)
-    header = las.header
     points = las.xyz
     points_sorted = points[np.lexsort((points[:, 0], points[:, 1], points[:, 2]))]
     x_min = las.header.x_min
     x_max = las.header.x_max
     y_min = las.header.y_min
     y_max = las.header.y_max
-    return header, points_sorted, x_min, x_max, y_min, y_max
+    return points_sorted, x_min, x_max, y_min, y_max
 
 
 def split(pointcloud, step, x_min, x_max, y_min, y_max):
@@ -60,7 +59,7 @@ def split(pointcloud, step, x_min, x_max, y_min, y_max):
             j += 1
         i -= 1
         j -= 1
-        n = j * step + i
+        n = (j-1) * step + i
         points[n].append(dot)
 
     return points
@@ -91,7 +90,7 @@ def write_las(name, points):
 
 def main():
     laspath, divider, radius, lasname = cmdParser()
-    header, points, x_min, x_max, y_min, y_max = read_las(laspath)
+    points, x_min, x_max, y_min, y_max = read_las(laspath)
     radius = (x_max - x_min) / (divider * radius)
     cells = split(points, divider, x_min, x_max, y_min, y_max)
     res = []
