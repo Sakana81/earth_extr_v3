@@ -3,6 +3,7 @@ import numpy as np
 import open3d as o3d
 import argparse
 
+
 def cmdParser():
     parser = argparse.ArgumentParser(description='Example of usage: \n'
                                                  'python main.py --lasfile=C:\..\..filename.las (str)'
@@ -27,7 +28,7 @@ def cmdParser():
     )
     parser.add_argument(
         '--lasname',
-        type=int,
+        type=str,
         help='type = str \nname of resulting file example: "file.las"'
     )
     my_namespace = parser.parse_args()
@@ -38,14 +39,12 @@ def read_las(path):
     las = laspy.read(path)
     header = las.header
     points = las.xyz
-    ground = points[np.where(las.classification == 2)]
-
     points_sorted = points[np.lexsort((points[:, 0], points[:, 1], points[:, 2]))]
     x_min = las.header.x_min
     x_max = las.header.x_max
     y_min = las.header.y_min
     y_max = las.header.y_max
-    return header, points_sorted, x_min, x_max, y_min, y_max, ground
+    return header, points_sorted, x_min, x_max, y_min, y_max
 
 
 def split(pointcloud, step, x_min, x_max, y_min, y_max):
@@ -67,7 +66,6 @@ def split(pointcloud, step, x_min, x_max, y_min, y_max):
     return points
 
 
-
 def getFloor_v2(dots, radius):
     local_minima = []
     for i in range(dots.shape[0] - 1):
@@ -76,57 +74,33 @@ def getFloor_v2(dots, radius):
             local_minima.append(tuple(dots[i]))
     return np.array(local_minima)
 
-def getFloor_v3(dots):
-    res = []
-
-
-    return res
 
 def plot_o3d(earth):
     geom = o3d.geometry.PointCloud()
     geom.points = o3d.utility.Vector3dVector(earth)
     o3d.visualization.draw_geometries([geom])
 
-def write_las(name, header, points):
 
+def write_las(name, points):
     outfile = laspy.create(point_format=0)
-    outfile.X = points[:,0]
-    outfile.Y = points[:,1]
-    outfile.Z = points[:,2]
+    outfile.X = points[:, 0]
+    outfile.Y = points[:, 1]
+    outfile.Z = points[:, 2]
     outfile.write(name)
-    """
-    header = laspy.header.LasHeader()
-    ground_las = laspy.LasData(header)
-    ground_las.points = points
-    ground_las.write(name)
-    """
+
 
 def main():
     laspath, divider, radius, lasname = cmdParser()
-    #laspath = 'C:\\Users\pickles\Downloads\Telegram Desktop\LYSVA_RGB_NIR_9\Lysva_may_PP9_D_G_O.las'
-    #laspath = 'C:\\Users\pickles\Downloads\Lysva_12052022_VLS.las'
-
-
-    #step = 100
-    #k = 12
-    step = divider
-    k = radius
-
-    header, points, x_min, x_max, y_min, y_max, ground = read_las(laspath)
-    radius = (x_max - x_min) / (step * k)
-    cells = split(points, step, x_min, x_max, y_min, y_max)
-    #print('Done splitting')
-    #print(f'{x_max-x_min}')
+    header, points, x_min, x_max, y_min, y_max = read_las(laspath)
+    radius = (x_max - x_min) / (divider * radius)
+    cells = split(points, divider, x_min, x_max, y_min, y_max)
     res = []
     for i, cell in enumerate(cells):
         earth = getFloor_v2(np.array(cell), radius)
         res.extend(earth)
-        #print(f'#{i} slice processed')
-    #plot_o3d(ground)
-    write_las(lasname, header, np.array(res))
+    write_las(lasname, np.array(res))
     plot_o3d(res)
 
 
 if __name__ == '__main__':
     main()
-    #print(timeit.timeit("main()", setup="from __main__ import main"))
